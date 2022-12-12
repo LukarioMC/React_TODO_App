@@ -11,13 +11,23 @@ function parseTodoFromRequest(req) {
     return {}; // Return empty obj in case of error parsing body.
   }
   let requestData = req.body;
-  
   let newTodo = {};
+  
   newTodo.title = requestData.title;
-  // Split tags into an array to be stored
-  newTodo.tags = requestData.tags instanceof String ? requestData.tags.split(",") : null;
-  // Parse due date and verify is valid date format
-  newTodo.todoBy = Timestamp.fromDate(new Date(requestData.todoBy));
+  isString(requestData.tags, () =>{
+    // Split tags into an array to be stored
+    newTodo.tags = requestData.tags.split(",");
+  });
+  isString(requestData.todoBy, () => {
+    // Parse due date string and verify is valid date format
+    newTodo.todoBy = Timestamp.fromDate(new Date(requestData.todoBy));
+  })
+  
+  if (typeof requestData.completed instanceof Boolean) {
+    newTodo.completed = requestData.completed;
+  } 
+  else if (requestData.completed === "true") newTodo.completed = true;
+  else if (requestData.completed === "false") newTodo.completed = false;
   
   return newTodo;
 }
@@ -29,9 +39,18 @@ function parseTodoFromRequest(req) {
  */
 function validateTodoItem(todoItem) {
   let isTitleDefined = todoItem.title != undefined;
-  let isTitleString = typeof todoItem.title === 'string' || todoItem.title instanceof String;
+  let isTitleString = typeof todoItem.title === "string" || todoItem.title instanceof String;
   if (isTitleDefined && isTitleString) return;
   throw "Cannot create TODO item without a valid name!";
+}
+
+/**
+ * Verifies that the data passed in is of type String, and executes the function passed into callback.
+ * @param {*} data 
+ * @param { Function } callback
+ */
+ function isString(data, callback) {
+  if (typeof data === 'string' || data instanceof String) callback();
 }
 
 export { parseTodoFromRequest, validateTodoItem };
