@@ -2,7 +2,7 @@
 import express from "express";
 import session from "express-session";
 import { initializeApp } from "firebase/app";
-import { getFirestore, addDoc, collection, getDocs } from "firebase/firestore";
+import { getFirestore, addDoc, query, getDocs, orderBy, collection, limit } from "firebase/firestore";
 import { parseTodoFromRequest, validateTodoItem } from "./todo.js";
 
 // Firestore database and sessions setup
@@ -32,15 +32,16 @@ routing.use(session(
     })
 );
 
-// Create new TODO List item
-routing.post("/newListItem", async function (req, res) {
+// Creates a new TODO List item
+routing.post("/new-todo", async function (req, res) {
   let newTodo = parseTodoFromRequest(req);
+  newTodo.completed = false;
   
   try {
     validateTodoItem(newTodo);
     // TODO: Replace req.body.user with req.session.user once sessions is setup.
-    await addDoc(collection(db, userCollection, req.body.user), newTodo);
-    console.log("New TODO item created.");
+    await addDoc(collection(db, userCollection, req.body.user, todoCollection), newTodo);
+    console.log("New TODO item created for user " + req.body.user);
   } catch (e) {
     console.error("Error creating new TODO item! ", e);
     res.status(500);
@@ -51,17 +52,24 @@ routing.post("/newListItem", async function (req, res) {
   res.send();
 });
 
-// Get the current users todo list items
-routing.get("/list", async function (req, res) {
+// Gets the current users todo items
+routing.get("/my-todos", async function (req, res) {
   // TODO: Replace req.body.user with req.session.user once sessions is setup.
-  const todoDocs = await getDocs(collection(db, userCollection, req.body.user, todoCollection));
+  const todoCollectionRef = collection(db, userCollection, req.body.user, todoCollection);
+  const todoQuery = query(todoCollectionRef, limit(32))
+  const todoDocs = await getDocs(todoQuery);
+  let todoList = [];
   
-  todoDocs.forEach((doc) => {
-    console.log(doc.id, " => ", doc.data());
+  todoDocs.forEach((todo) => {
+    const data = todo.data();
+    todoList.push({
+      title: data.title,
+      completed: data.completed
+    });
   });
   
   res.status(200);
-  res.send();
+  res.send(todoList);
 });
 
 
