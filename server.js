@@ -2,7 +2,7 @@
 import express from "express";
 import session from "express-session";
 import { initializeApp } from "firebase/app";
-import { getFirestore, addDoc, query, getDocs, orderBy, collection, limit } from "firebase/firestore";
+import { getFirestore, addDoc, query, where, limit, doc, getDocs, deleteDoc, collection } from "firebase/firestore";
 import { parseTodoFromRequest, validateTodoItem } from "./todo.js";
 
 // Firestore database and sessions setup
@@ -41,7 +41,7 @@ routing.post("/new-todo", async function (req, res) {
     validateTodoItem(newTodo);
     // TODO: Replace req.body.user with req.session.user once sessions is setup.
     await addDoc(collection(db, userCollection, req.body.user, todoCollection), newTodo);
-    console.log("New TODO item created for user " + req.body.user);
+    console.log("[" + new Date().toISOString() + "] User " + req.body.user + " created new TODO item \"" + newTodo.title + "\"");
   } catch (e) {
     console.error("Error creating new TODO item! ", e);
     res.status(500);
@@ -70,6 +70,22 @@ routing.get("/my-todos", async function (req, res) {
   
   res.status(200);
   res.send(todoList);
+});
+
+// Deletes a todo item
+routing.post("/delete-todo", async (req, res) => {
+  const todoToRemove = doc(db, userCollection, req.body.user, todoCollection, req.body.todoID);
+ 
+  deleteDoc(todoToRemove)
+  .then( () => {
+    console.log("[" + new Date().toISOString() + "] User " + req.body.user + " removed todo \"" + req.body.todoID + "\"!");
+    res.status(200);
+    res.send();
+  }).catch( (err) => {
+    console.error("Error removing todo item: " + err);
+    res.status(500);
+    res.send();
+  });
 });
 
 
