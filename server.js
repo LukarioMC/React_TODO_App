@@ -2,7 +2,7 @@
 import express from "express";
 import session from "express-session";
 import { initializeApp } from "firebase/app";
-import { getFirestore, addDoc, query, where, limit, doc, getDocs, deleteDoc, collection } from "firebase/firestore";
+import { getFirestore, addDoc, query, limit, doc, getDocs, deleteDoc, updateDoc, collection } from "firebase/firestore";
 import { parseTodoFromRequest, validateTodoItem } from "./todo.js";
 
 // Firestore database and sessions setup
@@ -72,11 +72,11 @@ routing.get("/my-todos", async function (req, res) {
   res.send(todoList);
 });
 
-// Deletes a todo item
-routing.post("/delete-todo", async (req, res) => {
-  const todoToRemove = doc(db, userCollection, req.body.user, todoCollection, req.body.todoID);
+// Deletes a todo item from a given ID
+routing.post("/delete-todo", (req, res) => {
+  const todoItem = doc(db, userCollection, req.body.user, todoCollection, req.body.todoID);
  
-  deleteDoc(todoToRemove)
+  deleteDoc(todoItem)
   .then( () => {
     console.log("[" + new Date().toISOString() + "] User " + req.body.user + " removed todo \"" + req.body.todoID + "\"!");
     res.status(200);
@@ -86,6 +86,22 @@ routing.post("/delete-todo", async (req, res) => {
     res.status(500);
     res.send();
   });
+});
+
+// Updates a todo item entry
+routing.post("/update-todo", (req, res) => {
+  const todoItem = doc(db, userCollection, req.body.user, todoCollection, req.body.todoID);
+  let newTodoData = parseTodoFromRequest(req);
+  updateDoc(todoItem, newTodoData)
+  .then( () => {
+    console.log("[" + new Date().toISOString() + "] User " + req.body.user + " updated todo item " + req.body.todoID)
+    res.status(200);
+    res.send();
+  }).catch( (err) => {
+    console.error("Error updating todo item: " + err);
+    res.status(500);
+    res.send();
+  })
 });
 
 
